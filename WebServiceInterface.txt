@@ -1,0 +1,42 @@
+Implement OwnURLClass to build a semantic URL
+
+class Response<T>:
+	public error status
+	public T data
+
+WebService methods: 
+	GET
+		* Response get()  ->  String
+		* Response get(class)
+			* support:
+				* String
+				* Bitmap
+				* Boolean
+				* Integer
+				* Float
+				* Double
+
+	POST
+		* Response post()  			->  String
+		* Response post(class)
+		* Response post(body_string)  	->  String
+		* Response post(body_class)  	->  String
+		* Response post(body_string, class)
+		* Response post(body_class, class) 	-> body_class: json/xml format
+
+	PUT
+		* Response put()  			->  String
+		* Response put(class)
+		* Response put(body_string)  	->  String
+		* Response put(body_class)  	->  String
+		* Response put(body_string, class)
+		* Response put(body_class, class) 		-> body_class: json/xml format
+
+	DELETE
+		* Response delete()  		->  String
+		* Response delete(class)
+		* Response delete(body_string)  	->  String
+		* Response delete(body_class)  	->  String
+		* Response delete(body_string, class)
+		* Response delete(body_class, class) 	-> body_class: json/xml format
+	

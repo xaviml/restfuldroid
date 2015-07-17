@@ -7,7 +7,7 @@
  * https://github.com/xaviml
  */
 
-package xml.restfuldroid;
+package xml.restfuldroid.parser.json.deserializer;
 
 import android.graphics.Bitmap;
 
@@ -18,19 +18,19 @@ import com.google.gson.JsonParseException;
 
 import java.lang.reflect.Type;
 
+import xml.restfuldroid.WebService;
 import xml.restfuldroid.throwers.ConnectionErrorException;
-
 
 public class BitmapDeserializer implements JsonDeserializer<Bitmap> {
 
     private WebService webService;
 
-    public BitmapDeserializer(WebService webService) {
-        this.webService = webService;
+    public BitmapDeserializer(WebService service) {
+        this.webService = service;
     }
 
     @Override
     public Bitmap deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException, ConnectionErrorException {
-        return webService.imageFromURL(json.getAsString());
+        return webService.get(Bitmap.class, json.getAsString()).data;
     }
 }

@@ -22,5 +22,5 @@ import xml.restfuldroid.enums.DataType;
  */
 public interface OnErrorListener {
 
-    public void onError(ConnectionErrorType connectionErrorType, DataType dataType);
+    public void onError(ConnectionErrorType connectionErrorType);
 }

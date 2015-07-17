@@ -32,12 +32,12 @@ public class CallBackUtily {
             runnable.run();
     }
 
-    public static void callbackIOException(final OnErrorListener listener, final DataType dataType) {
+    public static void callbackIOException(final OnErrorListener listener) {
         if(listener != null) {
             CallBackUtily.callbackToUser(listener, new Runnable() {
                 @Override
                 public void run() {
-                    listener.onError(ConnectionErrorType.NO_INTERNET_CONNECTION, dataType);
+                    listener.onError(ConnectionErrorType.NO_INTERNET_CONNECTION);
                 }
             });
         }else

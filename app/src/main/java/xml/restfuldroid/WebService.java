@@ -9,148 +9,193 @@
 
 package xml.restfuldroid;
 
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-
-import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.StatusLine;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPatch;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.params.HttpParams;
 import org.apache.http.util.EntityUtils;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.IllegalFormatException;
 
-import xml.restfuldroid.enums.ConnectionErrorType;
 import xml.restfuldroid.enums.DataType;
 import xml.restfuldroid.interfaces.OnErrorListener;
 import xml.restfuldroid.interfaces.OnImageListener;
-import xml.restfuldroid.throwers.ConnectionErrorException;
-
+import xml.restfuldroid.parser.CustomRequestParser;
+import xml.restfuldroid.parser.CustomResponseParser;
+import xml.restfuldroid.parser.SimpleRequestParser;
+import xml.restfuldroid.parser.SimpleResponseParser;
 
 public class WebService {
 
     private HttpClient httpClient;
 
     private OnErrorListener errorListener;
-    private OnImageListener imageListener;
 
-    private Gson mGson;
+    private CustomRequestParser customRequestParser;
+    private CustomResponseParser customResponseParser;
+    private HashMap<Class, SimpleRequestParser> simpleRequestParsers;
+    private HashMap<Class, SimpleResponseParser> simpleResponseParsers;
 
-    WebService(OnErrorListener errorListener,
-               HttpParams httpParameters,
-               OnImageListener imageListener) {
+    WebService (CustomRequestParser customRequestParser,
+                CustomResponseParser customResponseParser,
+                HashMap<Class, SimpleRequestParser> simpleRequestParsers,
+                HashMap<Class, SimpleResponseParser> simpleResponseParsers,
+                OnErrorListener errorListener,
+                HttpParams httpParameters) {
+        this.customRequestParser = customRequestParser;
+        this.customResponseParser = customResponseParser;
+        this.simpleRequestParsers = simpleRequestParsers;
+        this.simpleResponseParsers = simpleResponseParsers;
         this.errorListener = errorListener;
-        this.imageListener = imageListener;
 
         this.httpClient = new DefaultHttpClient(httpParameters);
-        GsonBuilder gsonBuilder = new GsonBuilder();
-        gsonBuilder.registerTypeAdapter(Bitmap.class, new BitmapDeserializer(this));
-        mGson = gsonBuilder.create();
     }
 
-    public String jsonFromURL(String url) throws ConnectionErrorException {
-        HttpGet request = new HttpGet(url);
-        HttpResponse httpResponse;
-        request.setHeader("Content-Type", "application/json");
-        try {
-            httpResponse = httpClient.execute(request);
-            if(!statusControl(httpResponse, DataType.JSON)) return null;
-            return EntityUtils.toString(httpResponse.getEntity());
-        } catch (IOException e) {
-            CallBackUtily.callbackIOException(errorListener, DataType.JSON);
-            return null;
+    private HttpRequestBase getHttpRequestBase(String url, String method_name) {
+        switch (method_name) {
+            case "GET":
+                return new HttpGet(url);
+            case "POST":
+                return new HttpPost(url);
+            case "PUT":
+                return new HttpPut(url);
+            case "PATCH":
+                return new HttpPatch(url);
+            case "DELETE":
+                return new HttpDelete(url);
+            default:
+                return null;
         }
     }
 
-    public <T> T objectFromURL(String url, Class<T> c) {
-        String json = jsonFromURL(url);
-        if(json == null) return null;
-        return mGson.fromJson(json, c);
+    private <T> Response<T> request(String unformatted_url, String method_name,
+                                    Object body, Class<T> cls, Object... parameters)
+                                    throws IllegalFormatException {
+        if (body != null && (method_name.equals("GET") || method_name.equals("DELETE")) && BuildConfig.DEBUG)
+            throw new AssertionError();
+        HttpRequestBase requestBase = getHttpRequestBase(String.format(unformatted_url,parameters), method_name);
+        assert requestBase != null;
+        Response<T> response = new Response<>();
+
+        //If there are body request...
+        if(body != null) {
+            SimpleRequestParser p;
+            byte[] b;
+            if((p = simpleRequestParsers.get(body.getClass()))!=null) {
+                b = p.serializer(body);
+                requestBase.setHeader("Content-Type", p.getContentType());
+            } else{
+                b = customRequestParser.serializer(body);
+                requestBase.setHeader("Content-Type", customRequestParser.getContentType());
+            }
+
+            HttpEntityEnclosingRequestBase tmp = (HttpEntityEnclosingRequestBase) requestBase;
+            tmp.setEntity(new ByteArrayEntity(b));
+        }
+
+        try {
+            HttpResponse httpResponse = httpClient.execute(requestBase);
+            //TODO: control the status code or not?
+            response.status = httpResponse.getStatusLine().getStatusCode();
+            if(cls != null) {
+                byte[] body_response = EntityUtils.toByteArray(httpResponse.getEntity());
+                SimpleResponseParser p;
+                if((p = simpleResponseParsers.get(cls))!=null) {
+                    //TODO: This line is correct?
+                    response.data = (T) p.deserializer(body_response);
+                } else{
+                    response.data = customResponseParser.deserializer(body_response, cls);
+                }
+            } else
+                response.data = null;
+            return response;
+        } catch (IOException e) {
+            //TODO: should I do this?
+            CallBackUtily.callbackIOException(errorListener);
+            return null;
+        }
     }
 
     /*
-    public Bitmap imageFromURL(final String key, final String url) {
-        if(this.imageListener == null) {
-            return getImageFromURL(url);
-        } else{
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    Bitmap b = getImageFromURL(url);
-                    CallBackUtily.callbackToUser(imageListener.onImage(key, b););
-                }
-            }).start();
-            return null;
-        }
-    }
-    */
+     * GET METHODS
+     */
 
-    public Bitmap imageFromURL(String url) {
-        HttpGet request = new HttpGet(url);
-        HttpResponse response;
-        try {
-            response = httpClient.execute(request);
-            if(!statusControl(response, DataType.IMAGE)) return null;
-            HttpEntity entity = response.getEntity();
-            byte[] bytes = EntityUtils.toByteArray(entity);
-            return BitmapFactory.decodeByteArray(bytes, 0,
-                    bytes.length);
-        } catch (IOException e) {
-            CallBackUtily.callbackIOException(errorListener, DataType.IMAGE);
-            return null;
-        }
+    public Response get(String unformatted_url, Object... parameters) {
+        return get(null, unformatted_url, parameters);
     }
 
-    private boolean statusControl(HttpResponse httpResponse, final DataType dataType) throws ConnectionErrorException{
-        StatusLine statusLine = httpResponse.getStatusLine();
-        int statusCode = statusLine.getStatusCode();
-        if(statusCode == 200) return true;
-        final ConnectionErrorType connectionErrorType;
-        if(this.errorListener != null) {
-            switch (statusCode) {
-                case 400: connectionErrorType = ConnectionErrorType.NO_SERVICES_FOUND; break;
-                default: connectionErrorType = ConnectionErrorType.OTHER_ERROR; break;
-            }
-            CallBackUtily.callbackToUser(errorListener, new Runnable() {
-                @Override
-                public void run() {
-                    errorListener.onError(connectionErrorType, dataType);
-                }
-            });
-            return false;
-        } else {
-            throw new ConnectionErrorException("Status code: "+statusCode+". If you want control this," +
-                    "you must implements OnErrorListener and include it on WebServiceConfig");
-        }
+    public <T> Response<T> get(Class<T> cls, String unformatted_url, Object... parameters) throws IllegalFormatException{
+        return request(unformatted_url, "GET", null, cls, parameters);
     }
 
-    public static String md5(String string) {
-        byte[] hash;
-        try {
-            hash = MessageDigest.getInstance("MD5").digest(string.getBytes("UTF-8"));
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Huh, MD5 should be supported?", e);
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("Huh, UTF-8 should be supported?", e);
-        }
+    /*
+     * POST METHODS
+     */
 
-        StringBuilder hex = new StringBuilder(hash.length * 2);
-        int i;
-        for (byte b : hash) {
-            i = (b & 0xFF);
-            if (i < 0x10) hex.append('0');
-            hex.append(Integer.toHexString(i));
-        }
+    public Response post(String unformatted_url, Object... parameters) {
+        return post(null, unformatted_url, parameters);
+    }
 
-        return hex.toString();
+    public <T> Response<T> post(Class<T> cls, String unformatted_url, Object... parameters) throws IllegalFormatException{
+        return post(cls, null, unformatted_url, parameters);
+    }
+
+    public <T> Response<T> post(Class<T> cls, Object body, String unformatted_url, Object... parameters) throws IllegalFormatException{
+        return request(unformatted_url, "POST", body, cls, parameters);
+    }
+
+    /*
+     * PUT METHODS
+     */
+
+    public Response put(String unformatted_url, Object... parameters) {
+        return put(null, unformatted_url, parameters);
+    }
+
+    public <T> Response<T> put(Class<T> cls, String unformatted_url, Object... parameters) throws IllegalFormatException{
+        return put(cls, null, unformatted_url, parameters);
+    }
+
+    public <T> Response<T> put(Class<T> cls, Object body, String unformatted_url, Object... parameters) throws IllegalFormatException{
+        return request(unformatted_url, "PUT", body, cls, parameters);
+    }
+
+    /*
+     * PATCH METHODS
+     */
+
+    public Response patch(String unformatted_url, Object... parameters) {
+        return patch(null, unformatted_url, parameters);
+    }
+
+    public <T> Response<T> patch(Class<T> cls, String unformatted_url, Object... parameters) throws IllegalFormatException{
+        return patch(cls, null, unformatted_url, parameters);
+    }
+
+    public <T> Response<T> patch(Class<T> cls, Object body, String unformatted_url, Object... parameters) throws IllegalFormatException{
+        return request(unformatted_url, "PATCH", body, cls, parameters);
+    }
+
+    /*
+     * DELETE METHODS
+     */
+
+    public Response delete(String unformatted_url, Object... parameters) {
+        return delete(null, unformatted_url, parameters);
+    }
+
+    public <T> Response<T> delete(Class<T> cls, String unformatted_url, Object... parameters) throws IllegalFormatException{
+        return request(unformatted_url, "DELETE", null, cls, parameters);
     }
 }

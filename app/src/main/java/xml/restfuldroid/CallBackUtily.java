@@ -10,11 +10,9 @@
 package xml.restfuldroid;
 
 
-import android.app.Activity;
-import android.support.v4.app.Fragment;
+//import android.support.v4.app.Fragment;
 
 import xml.restfuldroid.enums.ConnectionErrorType;
-import xml.restfuldroid.enums.DataType;
 import xml.restfuldroid.interfaces.OnErrorListener;
 import xml.restfuldroid.throwers.ConnectionErrorException;
 
@@ -23,13 +21,16 @@ public class CallBackUtily {
 
     private CallBackUtily() { }
 
+
     public static void callbackToUser(Object obj, final Runnable runnable) {
+        /*
         if(obj instanceof Activity) {
             ((Activity) obj).runOnUiThread(runnable);
         } else if(obj instanceof Fragment) {
             ((Fragment)obj).getActivity().runOnUiThread(runnable);
         } else
             runnable.run();
+            */
     }
 
     public static void callbackIOException(final OnErrorListener listener) {

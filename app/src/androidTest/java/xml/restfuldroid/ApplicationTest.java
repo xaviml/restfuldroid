@@ -1,12 +1,11 @@
 package xml.restfuldroid;
 
 import android.app.Application;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.test.ApplicationTestCase;
-import android.util.Log;
 
-import com.google.gson.Gson;
+import xml.restfuldroid.core.WebService;
+import xml.restfuldroid.core.WebServicesBuilder;
+import xml.restfuldroid.core.model.Response;
 
 /**
  * <a href="http://d.android.com/tools/testing/testing_android.html">Testing Fundamentals</a>

@@ -5,7 +5,7 @@ import android.graphics.Bitmap;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-import xml.restfuldroid.WebService;
+import xml.restfuldroid.core.WebService;
 import xml.restfuldroid.parser.CustomRequestParser;
 import xml.restfuldroid.parser.CustomResponseParser;
 import xml.restfuldroid.parser.WebServiceParser;

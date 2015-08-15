@@ -27,4 +27,9 @@ public class Utils {
         }
         return hex.toString();
     }
+
+
+
+
+    private Utils() {}
 }

@@ -7,7 +7,7 @@
  * https://github.com/xaviml
  */
 
-package xml.restfuldroid.parser.json.deserializer;
+package xml.restfuldroid.parser.customparser.deserializer;
 
 import android.graphics.Bitmap;
 

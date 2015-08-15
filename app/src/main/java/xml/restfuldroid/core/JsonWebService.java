@@ -7,7 +7,7 @@
  * https://github.com/xaviml
  */
 
-package xml.restfuldroid;
+package xml.restfuldroid.core;
 
 
 import org.apache.http.HttpResponse;
@@ -21,22 +21,23 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.params.HttpParams;
 import org.apache.http.util.EntityUtils;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.IllegalFormatException;
+import java.util.Map;
 
-import xml.restfuldroid.enums.DataType;
+import xml.restfuldroid.BuildConfig;
+import xml.restfuldroid.CallBackUtily;
+import xml.restfuldroid.core.model.Response;
 import xml.restfuldroid.interfaces.OnErrorListener;
-import xml.restfuldroid.interfaces.OnImageListener;
 import xml.restfuldroid.parser.CustomRequestParser;
 import xml.restfuldroid.parser.CustomResponseParser;
 import xml.restfuldroid.parser.SimpleRequestParser;
 import xml.restfuldroid.parser.SimpleResponseParser;
 
-public class WebService {
+public class JsonWebService implements WebService {
 
     private HttpClient httpClient;
 
@@ -44,22 +45,22 @@ public class WebService {
 
     private CustomRequestParser customRequestParser;
     private CustomResponseParser customResponseParser;
-    private HashMap<Class, SimpleRequestParser> simpleRequestParsers;
-    private HashMap<Class, SimpleResponseParser> simpleResponseParsers;
 
-    WebService (CustomRequestParser customRequestParser,
-                CustomResponseParser customResponseParser,
-                HashMap<Class, SimpleRequestParser> simpleRequestParsers,
-                HashMap<Class, SimpleResponseParser> simpleResponseParsers,
-                OnErrorListener errorListener,
-                HttpParams httpParameters) {
-        this.customRequestParser = customRequestParser;
-        this.customResponseParser = customResponseParser;
-        this.simpleRequestParsers = simpleRequestParsers;
-        this.simpleResponseParsers = simpleResponseParsers;
-        this.errorListener = errorListener;
+    private Map<Class, Class<? extends SimpleRequestParser>> simpleRequestParsers;
+    private Map<Class, Class<? extends SimpleResponseParser>> simpleResponseParsers;
+    private Map<Class, SimpleRequestParser> simpleRequestParserInstances;
+    private Map<Class, SimpleResponseParser> simpleResponseParserInstances;
 
-        this.httpClient = new DefaultHttpClient(httpParameters);
+    JsonWebService(WebServicesBuilder builder) {
+        this.customRequestParser = builder.customRequestParser;
+        this.customResponseParser = builder.customResponseParser;
+        this.simpleRequestParsers = builder.simpleRequestParsers;
+        this.simpleResponseParsers = builder.simpleResponseParsers;
+        this.errorListener = builder.onErrorListener;
+
+        this.httpClient = new DefaultHttpClient(builder.httpParams);
+        this.simpleRequestParserInstances = new HashMap<>();
+        this.simpleResponseParserInstances = new HashMap<>();
     }
 
     private HttpRequestBase getHttpRequestBase(String url, String method_name) {
@@ -92,9 +93,21 @@ public class WebService {
         if(body != null) {
             SimpleRequestParser p;
             byte[] b;
-            if((p = simpleRequestParsers.get(body.getClass()))!=null) {
-                b = p.serializer(body);
+
+            if(simpleRequestParsers.containsKey(body.getClass())) {
+                if ((p = simpleRequestParserInstances.get(body.getClass())) == null) {
+                    try {
+                        Class clazz = simpleRequestParsers.get(body.getClass());
+                        p = (SimpleRequestParser) clazz.newInstance();
+                        simpleRequestParserInstances.put(body.getClass(), p);
+                    } catch (InstantiationException e) {
+                        e.printStackTrace();
+                    } catch (IllegalAccessException e) {
+                        e.printStackTrace();
+                    }
+                }
                 requestBase.setHeader("Content-Type", p.getContentType());
+                b = p.serializer(body);
             } else{
                 b = customRequestParser.serializer(body);
                 requestBase.setHeader("Content-Type", customRequestParser.getContentType());
@@ -111,8 +124,19 @@ public class WebService {
             if(cls != null) {
                 byte[] body_response = EntityUtils.toByteArray(httpResponse.getEntity());
                 SimpleResponseParser p;
-                if((p = simpleResponseParsers.get(cls))!=null) {
-                    //TODO: This line is correct?
+
+                if(simpleResponseParsers.containsKey(body.getClass())) {
+                    if ((p = simpleResponseParserInstances.get(body.getClass())) == null) {
+                        try {
+                            Class clazz = simpleResponseParsers.get(body.getClass());
+                            p = (SimpleResponseParser) clazz.newInstance();
+                            simpleResponseParserInstances.put(body.getClass(), p);
+                        } catch (InstantiationException e) {
+                            e.printStackTrace();
+                        } catch (IllegalAccessException e) {
+                            e.printStackTrace();
+                        }
+                    }
                     response.data = (T) p.deserializer(body_response);
                 } else{
                     response.data = customResponseParser.deserializer(body_response, cls);
@@ -131,10 +155,12 @@ public class WebService {
      * GET METHODS
      */
 
+    @Override
     public Response get(String unformatted_url, Object... parameters) {
         return get(null, unformatted_url, parameters);
     }
 
+    @Override
     public <T> Response<T> get(Class<T> cls, String unformatted_url, Object... parameters) throws IllegalFormatException{
         return request(unformatted_url, "GET", null, cls, parameters);
     }
@@ -143,14 +169,17 @@ public class WebService {
      * POST METHODS
      */
 
+    @Override
     public Response post(String unformatted_url, Object... parameters) {
         return post(null, unformatted_url, parameters);
     }
 
+    @Override
     public <T> Response<T> post(Class<T> cls, String unformatted_url, Object... parameters) throws IllegalFormatException{
         return post(cls, null, unformatted_url, parameters);
     }
 
+    @Override
     public <T> Response<T> post(Class<T> cls, Object body, String unformatted_url, Object... parameters) throws IllegalFormatException{
         return request(unformatted_url, "POST", body, cls, parameters);
     }
@@ -159,14 +188,17 @@ public class WebService {
      * PUT METHODS
      */
 
+    @Override
     public Response put(String unformatted_url, Object... parameters) {
         return put(null, unformatted_url, parameters);
     }
 
+    @Override
     public <T> Response<T> put(Class<T> cls, String unformatted_url, Object... parameters) throws IllegalFormatException{
         return put(cls, null, unformatted_url, parameters);
     }
 
+    @Override
     public <T> Response<T> put(Class<T> cls, Object body, String unformatted_url, Object... parameters) throws IllegalFormatException{
         return request(unformatted_url, "PUT", body, cls, parameters);
     }
@@ -175,14 +207,17 @@ public class WebService {
      * PATCH METHODS
      */
 
+    @Override
     public Response patch(String unformatted_url, Object... parameters) {
         return patch(null, unformatted_url, parameters);
     }
 
+    @Override
     public <T> Response<T> patch(Class<T> cls, String unformatted_url, Object... parameters) throws IllegalFormatException{
         return patch(cls, null, unformatted_url, parameters);
     }
 
+    @Override
     public <T> Response<T> patch(Class<T> cls, Object body, String unformatted_url, Object... parameters) throws IllegalFormatException{
         return request(unformatted_url, "PATCH", body, cls, parameters);
     }
@@ -191,10 +226,12 @@ public class WebService {
      * DELETE METHODS
      */
 
+    @Override
     public Response delete(String unformatted_url, Object... parameters) {
         return delete(null, unformatted_url, parameters);
     }
 
+    @Override
     public <T> Response<T> delete(Class<T> cls, String unformatted_url, Object... parameters) throws IllegalFormatException{
         return request(unformatted_url, "DELETE", null, cls, parameters);
     }

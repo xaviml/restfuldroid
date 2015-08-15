@@ -1,4 +1,4 @@
-package xml.restfuldroid;
+package xml.restfuldroid.core.model;
 
 /**
  * Created by zenbook on 30/03/15.

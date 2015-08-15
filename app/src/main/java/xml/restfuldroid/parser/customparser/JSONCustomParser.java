@@ -1,22 +1,20 @@
-package xml.restfuldroid.parser.simpleparser;
+package xml.restfuldroid.parser.customparser;
 
 import android.graphics.Bitmap;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 
 import xml.restfuldroid.core.WebService;
-import xml.restfuldroid.parser.SimpleRequestParser;
-import xml.restfuldroid.parser.SimpleResponseParser;
+import xml.restfuldroid.parser.CustomRequestParser;
+import xml.restfuldroid.parser.CustomResponseParser;
 import xml.restfuldroid.parser.WebServiceParser;
 import xml.restfuldroid.parser.customparser.deserializer.BitmapDeserializer;
 
 /**
- * Created by zenbook on 31/03/15.
+ * Created by zenbook on 30/03/15.
  */
-public class JsonElementSimpleParser implements SimpleRequestParser<JsonObject>, SimpleResponseParser<JsonObject>, WebServiceParser {
+public class JSONCustomParser implements CustomRequestParser, CustomResponseParser, WebServiceParser {
 
     private Gson mGson;
 
@@ -28,19 +26,17 @@ public class JsonElementSimpleParser implements SimpleRequestParser<JsonObject>,
     }
 
     @Override
-    public byte[] serializer(JsonObject root) {
-        return mGson.toJson(root).getBytes();
+    public <T> byte[] serializer(T obj) {
+        return mGson.toJson(obj).getBytes();
     }
 
     @Override
-    public JsonObject deserializer(byte[] data) {
-        return mGson.fromJson(new String(data), JsonElement.class).getAsJsonObject();
+    public <T> T deserializer(byte[] data, Class<T> c) {
+        return mGson.fromJson(new String(data), c);
     }
 
     @Override
     public String getContentType() {
         return "application/json";
     }
-
-
 }

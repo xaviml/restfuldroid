@@ -11,7 +11,6 @@ package xml.restfuldroid.interfaces;
 
 
 import xml.restfuldroid.enums.ConnectionErrorType;
-import xml.restfuldroid.enums.DataType;
 
 /**
  * Restfullib is a library to facilitate the creation of an android app (client side)

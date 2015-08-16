@@ -19,7 +19,7 @@ import com.google.gson.JsonParseException;
 import java.lang.reflect.Type;
 
 import xml.restfuldroid.core.WebService;
-import xml.restfuldroid.throwers.ConnectionErrorException;
+import xml.restfuldroid.exception.ConnectionErrorException;
 
 public class BitmapDeserializer implements JsonDeserializer<Bitmap> {
 

@@ -14,7 +14,7 @@ package xml.restfuldroid;
 
 import xml.restfuldroid.enums.ConnectionErrorType;
 import xml.restfuldroid.interfaces.OnErrorListener;
-import xml.restfuldroid.throwers.ConnectionErrorException;
+import xml.restfuldroid.exception.ConnectionErrorException;
 
 
 public class CallBackUtily {

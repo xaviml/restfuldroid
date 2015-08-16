@@ -8,6 +8,10 @@ import xml.restfuldroid.core.model.Response;
  * Created by zenbook on 9/07/15.
  */
 public interface WebService {
+    Response request(String method, String unformatted_url, Object... parameters);
+
+    <T> Response request(String method, Class<T> cls, String unformatted_url, Object... parameters) throws IllegalFormatException;
+
     Response get(String unformatted_url, Object... parameters);
 
     <T> Response<T> get(Class<T> cls, String unformatted_url, Object... parameters) throws IllegalFormatException;

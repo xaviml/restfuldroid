@@ -10,6 +10,8 @@
 package xml.restfuldroid.core;
 
 
+import android.util.Log;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpDelete;
@@ -80,7 +82,7 @@ public class JsonWebService implements WebService {
         }
     }
 
-    private <T> Response<T> request(String unformatted_url, String method_name,
+    private <T> Response<T> request(String method_name, String unformatted_url,
                                     Object body, Class<T> cls, Object... parameters)
                                     throws IllegalFormatException {
         if (body != null && (method_name.equals("GET") || method_name.equals("DELETE")) && BuildConfig.DEBUG)
@@ -125,12 +127,12 @@ public class JsonWebService implements WebService {
                 byte[] body_response = EntityUtils.toByteArray(httpResponse.getEntity());
                 SimpleResponseParser p;
 
-                if(simpleResponseParsers.containsKey(body.getClass())) {
-                    if ((p = simpleResponseParserInstances.get(body.getClass())) == null) {
+                if(simpleResponseParsers.containsKey(cls.getClass())) {
+                    if ((p = simpleResponseParserInstances.get(cls.getClass())) == null) {
                         try {
-                            Class clazz = simpleResponseParsers.get(body.getClass());
+                            Class clazz = simpleResponseParsers.get(cls.getClass());
                             p = (SimpleResponseParser) clazz.newInstance();
-                            simpleResponseParserInstances.put(body.getClass(), p);
+                            simpleResponseParserInstances.put(cls.getClass(), p);
                         } catch (InstantiationException e) {
                             e.printStackTrace();
                         } catch (IllegalAccessException e) {
@@ -156,13 +158,23 @@ public class JsonWebService implements WebService {
      */
 
     @Override
+    public Response request(String method, String unformatted_url, Object... parameters) {
+        return request(method, unformatted_url, null, null, parameters);
+    }
+
+    @Override
+    public <T> Response<T> request(String method, Class<T> cls, String unformatted_url, Object... parameters) throws IllegalFormatException {
+        return request(method, unformatted_url, null, cls, parameters);
+    }
+
+    @Override
     public Response get(String unformatted_url, Object... parameters) {
         return get(null, unformatted_url, parameters);
     }
 
     @Override
     public <T> Response<T> get(Class<T> cls, String unformatted_url, Object... parameters) throws IllegalFormatException{
-        return request(unformatted_url, "GET", null, cls, parameters);
+        return request("GET", unformatted_url, null, cls, parameters);
     }
 
     /*
@@ -181,7 +193,7 @@ public class JsonWebService implements WebService {
 
     @Override
     public <T> Response<T> post(Class<T> cls, Object body, String unformatted_url, Object... parameters) throws IllegalFormatException{
-        return request(unformatted_url, "POST", body, cls, parameters);
+        return request("POST", unformatted_url, body, cls, parameters);
     }
 
     /*
@@ -200,7 +212,7 @@ public class JsonWebService implements WebService {
 
     @Override
     public <T> Response<T> put(Class<T> cls, Object body, String unformatted_url, Object... parameters) throws IllegalFormatException{
-        return request(unformatted_url, "PUT", body, cls, parameters);
+        return request("PUT", unformatted_url, body, cls, parameters);
     }
 
     /*
@@ -219,7 +231,7 @@ public class JsonWebService implements WebService {
 
     @Override
     public <T> Response<T> patch(Class<T> cls, Object body, String unformatted_url, Object... parameters) throws IllegalFormatException{
-        return request(unformatted_url, "PATCH", body, cls, parameters);
+        return request("PATCH", unformatted_url, body, cls, parameters);
     }
 
     /*
@@ -233,6 +245,6 @@ public class JsonWebService implements WebService {
 
     @Override
     public <T> Response<T> delete(Class<T> cls, String unformatted_url, Object... parameters) throws IllegalFormatException{
-        return request(unformatted_url, "DELETE", null, cls, parameters);
+        return request("DELETE", unformatted_url, null, cls, parameters);
     }
 }

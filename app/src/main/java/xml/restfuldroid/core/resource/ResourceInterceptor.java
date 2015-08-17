@@ -54,9 +54,10 @@ public class ResourceInterceptor implements InvocationHandler {
         if(method.getReturnType() == void.class) {
             this.service.request(httpMethod, url);
             return null;
-        }else if(method.getReturnType() == Response.class)
+        }else if(method.getReturnType() == Response.class) {
             return this.service.request(httpMethod, responseClazz, url);
-        else
+        }else {
             return this.service.request(httpMethod, responseClazz, url).data;
+        }
     }
 }

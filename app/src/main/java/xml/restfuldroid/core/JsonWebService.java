@@ -127,12 +127,12 @@ public class JsonWebService implements WebService {
                 byte[] body_response = EntityUtils.toByteArray(httpResponse.getEntity());
                 SimpleResponseParser p;
 
-                if(simpleResponseParsers.containsKey(cls.getClass())) {
-                    if ((p = simpleResponseParserInstances.get(cls.getClass())) == null) {
+                if(simpleResponseParsers.containsKey(cls)) {
+                    if ((p = simpleResponseParserInstances.get(cls)) == null) {
                         try {
-                            Class clazz = simpleResponseParsers.get(cls.getClass());
+                            Class clazz = simpleResponseParsers.get(cls);
                             p = (SimpleResponseParser) clazz.newInstance();
-                            simpleResponseParserInstances.put(cls.getClass(), p);
+                            simpleResponseParserInstances.put(cls, p);
                         } catch (InstantiationException e) {
                             e.printStackTrace();
                         } catch (IllegalAccessException e) {
